@@ -290,7 +290,61 @@
       ApeSwap: "0xC0788A3aD43d79aa53B09c2EaCc313A787d1d607",
       Dfyn: "0xA8b607Aa09B6A2641cF6F90f643E76d3f6e6Ff73"
     };
+<script>
+// 🟢 Restore Trade Button Logic 🟢
 
+async function performArbitrage(buyRouter, sellRouter, token, amountIn) {
+  try {
+    const autoDeposit = document.getElementById("depositToContractToggle").checked;
+    const flashLoanProvider = "DODO";
+
+    const tx = await contract.connect(signer).executeArbitrage(
+      buyRouter,
+      sellRouter,
+      token,
+      amountIn,
+      autoDeposit,
+      flashLoanProvider
+    );
+
+    logToConsole(`⏳ Sent arbitrage TX: ${tx.hash}`);
+    await tx.wait();
+    logToConsole(`✅ Trade confirmed: ${tx.hash}`);
+    await updateAllBalances();
+
+  } catch (err) {
+    console.error("❌ Arbitrage failed", err);
+    logToConsole("❌ Arbitrage TX error: " + (err?.message || err));
+  }
+}
+
+function logToConsole(msg) {
+  const logDiv = document.getElementById("log");
+  const p = document.createElement("div");
+  p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  logDiv.prepend(p);
+}
+
+// 🟢 Add this to create clickable "Trade" buttons in each row
+function showInResults(rowData) {
+  const resultsTable = document.getElementById("results");
+
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>${rowData.tokenSymbol}</td>
+    <td>${rowData.buyRouterName}</td>
+    <td>${rowData.sellRouterName}</td>
+    <td>${rowData.buyPrice}</td>
+    <td>${rowData.sellPrice}</td>
+    <td>${rowData.profitUSD}</td>
+    <td>${rowData.profitPct.toFixed(4)}%</td>
+    <td>${rowData.status}</td>
+    <td><button onclick="performArbitrage('${rowData.buyRouter}','${rowData.sellRouter}','${rowData.token}', ethers.utils.parseUnits('${rowData.amount}', 6))">Trade</button></td>
+  `;
+  tr.className = rowData.profitUSD > 0 ? "profitable" : "";
+  resultsTable.appendChild(tr);
+}
+</script>	  
     async function connectWallet() {
       try {
         provider = new ethers.providers.Web3Provider(window.ethereum);
